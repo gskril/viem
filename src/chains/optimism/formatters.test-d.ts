@@ -11,7 +11,7 @@ import {
   type OptimismRpcTransaction,
   type OptimismTransaction,
   formattersOptimism,
-} from './optimism.js'
+} from './formatters.js'
 
 describe('block', () => {
   expectTypeOf(formattersOptimism.block.format).parameter(0).toEqualTypeOf<

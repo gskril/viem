@@ -17,7 +17,7 @@ import type {
 } from '../../types/transaction.js'
 import { sendTransaction } from '../../wallet.js'
 import { celo } from '../index.js'
-import { formattersCelo } from './celo.js'
+import { formattersCelo } from './formatters.js'
 
 describe('block', () => {
   expectTypeOf(formattersCelo.block.format).parameter(0).toEqualTypeOf<
