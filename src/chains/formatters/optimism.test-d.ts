@@ -2,21 +2,22 @@ import { describe, expectTypeOf, test } from 'vitest'
 
 import { getBlock } from '../../actions/public/getBlock.js'
 import { getTransaction } from '../../actions/public/getTransaction.js'
+import { getTransactionReceipt } from '../../actions/public/getTransactionReceipt.js'
 import { createPublicClient } from '../../clients/createPublicClient.js'
 import { http } from '../../clients/transports/http.js'
-import type { RpcBlock, RpcTransaction } from '../../types/rpc.js'
-import type { Transaction } from '../../types/transaction.js'
+import type { RpcBlock } from '../../types/rpc.js'
 import { optimism } from '../index.js'
 import {
-  type DepositTransaction,
-  type RpcDepositTransaction,
+  type OptimismRpcTransaction,
+  type OptimismTransaction,
   formattersOptimism,
 } from './optimism.js'
 
 describe('block', () => {
   expectTypeOf(formattersOptimism.block.format).parameter(0).toEqualTypeOf<
     Partial<RpcBlock> & {
-      transactions: `0x${string}`[] | (RpcTransaction | RpcDepositTransaction)[]
+      stateRoot: `0x${string}`
+      transactions: `0x${string}`[] | OptimismRpcTransaction[]
     }
   >()
 })
@@ -45,7 +46,7 @@ describe('smoke', () => {
     })
 
     expectTypeOf(block.transactions).toEqualTypeOf<
-      `0x${string}`[] | (Transaction | DepositTransaction)[]
+      `0x${string}`[] | OptimismTransaction[]
     >()
   })
 
@@ -81,5 +82,21 @@ describe('smoke', () => {
     expectTypeOf(
       transaction.type === 'eip1559' && transaction.mint,
     ).toEqualTypeOf<false | undefined>()
+  })
+
+  test('transaction receipt', async () => {
+    const client = createPublicClient({
+      chain: optimism,
+      transport: http(),
+    })
+
+    const transactionReceipt = await getTransactionReceipt(client, {
+      hash: '0x',
+    })
+
+    expectTypeOf(transactionReceipt.l1Fee).toEqualTypeOf<bigint | null>()
+    expectTypeOf(transactionReceipt.l1FeeScalar).toEqualTypeOf<number | null>()
+    expectTypeOf(transactionReceipt.l1GasPrice).toEqualTypeOf<bigint | null>()
+    expectTypeOf(transactionReceipt.l1GasUsed).toEqualTypeOf<bigint | null>()
   })
 })
