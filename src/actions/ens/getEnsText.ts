@@ -20,7 +20,40 @@ import {
   readContract,
 } from '../public/readContract.js'
 
-export type GetEnsTextParameters<TKeys> = Prettify<
+/**
+ * Recommended Keys for ENS Text Records
+ */
+export type RecommendedKey =
+  | 'url'
+  | 'name'
+  | 'email'
+  | 'header'
+  | 'avatar'
+  | 'location'
+  | 'timezone'
+  | 'language'
+  | 'pronouns'
+  | 'com.github'
+  | 'org.matrix'
+  | 'io.keybase'
+  | 'description'
+  | 'com.twitter'
+  | 'com.discord'
+  | 'social.bsky'
+  | 'org.telegram'
+  | 'social.mastodon'
+
+/** Allows users to specify their own keys, but also get recommended the keys above */
+export type RecordKey = RecommendedKey | (string & {})
+
+/** Allows users to specify a single key or an array of keys */
+export type RecordKeyOrKeys<TKeys extends RecordKey> = TKeys | TKeys[]
+
+/** Parameters for {@link getEnsText} */
+export type GetEnsTextParameters<
+  TKeys extends RecordKeyOrKeys<TRecordKeys>,
+  TRecordKeys extends RecordKey,
+> = Prettify<
   Pick<ReadContractParameters, 'blockNumber' | 'blockTag'> & {
     /** ENS name to get Text for. */
     name: string
@@ -31,10 +64,10 @@ export type GetEnsTextParameters<TKeys> = Prettify<
   }
 >
 
-// if a single key is passed, return a single string or null. otherwise, return an array of strings or nulls.
-export type GetEnsTextReturnType<T> = T extends string
-  ? string | null
-  : (string | null)[] | null
+/** Return type for {@link getEnsText} */
+export type GetEnsTextReturnType<TKeys extends RecordKeyOrKeys<RecordKey>> =
+  | (TKeys extends RecordKey ? string : { [K in TKeys[number]]: string | null })
+  | null
 
 /**
  * Gets a text record(s) for specified ENS name.
@@ -48,7 +81,7 @@ export type GetEnsTextReturnType<T> = T extends string
  *
  * @param client - Client to use
  * @param parameters - {@link GetEnsTextParameters}
- * @returns Address for ENS resolver. {@link GetEnsTextReturnType}
+ * @returns Text Record(s) for ENS name. {@link GetEnsTextReturnType}
  *
  * @example
  * import { createPublicClient, http } from 'viem'
@@ -67,7 +100,8 @@ export type GetEnsTextReturnType<T> = T extends string
  */
 export async function getEnsText<
   TChain extends Chain | undefined,
-  TKeys extends string | string[],
+  TKeys extends RecordKeyOrKeys<TRecordKeys>,
+  TRecordKeys extends RecordKey,
 >(
   client: Client<Transport, TChain>,
   {
@@ -76,7 +110,7 @@ export async function getEnsText<
     name,
     key,
     universalResolverAddress: universalResolverAddress_,
-  }: GetEnsTextParameters<TKeys>,
+  }: GetEnsTextParameters<TKeys, TRecordKeys>,
 ): Promise<GetEnsTextReturnType<TKeys>> {
   let universalResolverAddress = universalResolverAddress_
   if (!universalResolverAddress) {
@@ -93,7 +127,7 @@ export async function getEnsText<
   }
 
   // If a single key is passed, push it into an array so we can use the same logic for both cases
-  const keys: string[] = Array.isArray(key) ? key : [key]
+  const keys: TRecordKeys[] = Array.isArray(key) ? key : [key as TRecordKeys]
 
   try {
     const res = await readContract(client, {
@@ -114,11 +148,14 @@ export async function getEnsText<
       blockTag,
     })
 
-    const decodedRecords: (string | null)[] = []
+    const decodedRecords = {} as Record<TRecordKeys, string | null>
 
-    for (const encodedRecord of res[0]) {
+    for (let i = 0; i < res[0].length; i++) {
+      const encodedRecord = res[0][i]
+      const queriedKey = keys[i]
+
       if (encodedRecord === '0x') {
-        decodedRecords.push(null)
+        decodedRecords[queriedKey] = null
         continue
       }
 
@@ -128,11 +165,11 @@ export async function getEnsText<
         data: encodedRecord,
       })
 
-      decodedRecords.push(record === '' ? null : record)
+      decodedRecords[queriedKey] = record === '' ? null : record
     }
 
     return (
-      decodedRecords.length === 1 ? decodedRecords[0] : decodedRecords
+      keys.length === 1 ? decodedRecords[key as TRecordKeys] : decodedRecords
     ) as GetEnsTextReturnType<TKeys>
   } catch (err) {
     if (isNullUniversalResolverError(err, 'resolve')) return null

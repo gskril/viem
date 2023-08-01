@@ -30,7 +30,7 @@ test('gets multiple text records for name', async () => {
       key: ['com.twitter', 'description', 'url'],
     }),
   ).resolves.toMatchInlineSnapshot(
-    '["wagmi_sh", "React Hooks for Ethereum", "wagmi.sh"]',
+    '{"com.twitter": "wagmi_sh", description: "React Hooks for Ethereum", url: "wagmi.sh"}',
   )
 })
 
@@ -49,7 +49,9 @@ test('name with some empty text records', async () => {
       name: 'wagmi-dev.eth',
       key: ['com.twitter', 'emptyrecord'],
     }),
-  ).resolves.toMatchInlineSnapshot('["wagmi_sh", null]')
+  ).resolves.toMatchInlineSnapshot(
+    '{"com.twitter.": "wagmi_sh", emptyrecord: null}',
+  )
 })
 
 test('name with all empty text records', async () => {
@@ -58,7 +60,7 @@ test('name with all empty text records', async () => {
       name: 'wagmi-dev.eth',
       key: ['emptyrecord1', 'emptyrecord2'],
     }),
-  ).resolves.toMatchInlineSnapshot('[null, null]')
+  ).resolves.toMatchInlineSnapshot('{emptyrecord1: null, emptyrecord2: null}')
 })
 
 test('name with resolver that does not support text()', async () => {
